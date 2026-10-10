@@ -56,6 +56,7 @@
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     gap:14px; padding:20px; text-align:center;
     backdrop-filter:blur(4px);
+    overflow-y:auto;
   }
   body.light .overlay{background:linear-gradient(180deg,rgba(240,243,250,.9),rgba(230,235,245,.98));}
   .overlay.hidden{display:none;}
@@ -118,14 +119,27 @@
   .emptyHist{color:var(--muted); font-size:14px; padding:16px;}
   h2.sectionTitle{margin:0 0 4px; font-size:22px;}
 
-  .statsBox{
-    background:var(--card); border-radius:16px; padding:16px 22px;
-    display:flex; gap:26px; justify-content:center; box-shadow:0 8px 22px rgba(0,0,0,.3);
-    margin:6px 0;
+  /* ===== GAME OVER ===== */
+  .goStats{
+    background:var(--card); border-radius:16px; padding:14px 18px;
+    display:flex; flex-direction:column; gap:8px; box-shadow:0 8px 22px rgba(0,0,0,.3);
+    margin:6px 0; min-width:min(340px,88vw);
   }
-  .stat{display:flex; flex-direction:column; align-items:center;}
-  .stat .v{font-size:26px; font-weight:900; color:var(--accent);}
-  .stat .l{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px;}
+  .goRow{
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:15px; padding:4px 0;
+  }
+  .goRow .label{color:var(--muted); font-weight:600;}
+  .goRow .val{font-weight:900; color:var(--fg);}
+  .goRow.big .val{font-size:22px; color:var(--accent);}
+  .goRow.extra .val{color:var(--ok);}
+  .goRow.total{
+    border-top:1px solid rgba(128,128,128,.35); margin-top:4px; padding-top:8px;
+  }
+  .goRow.total .label{color:var(--fg); font-weight:800;}
+  .goRow.total .val{font-size:20px; color:var(--accent);}
+  .goHint{font-size:11px; color:var(--muted); font-style:italic; text-align:center;}
+
   input[type=text]{
     padding:12px 16px; border-radius:12px; border:2px solid var(--muted);
     background:var(--card); color:var(--fg); font-size:16px; text-align:center;
@@ -133,6 +147,7 @@
   }
   input[type=text]:focus{border-color:var(--accent);}
   .newRecord{color:var(--accent); font-weight:900; font-size:20px; animation:pulse 1s infinite;}
+  .noRecord{color:var(--muted); font-size:13px; text-align:center; max-width:340px; line-height:1.4;}
 
   #countdown{
     position:absolute; inset:0; z-index:35; display:flex; align-items:center; justify-content:center;
@@ -176,8 +191,10 @@
   @media (max-width:420px){
     .hud{font-size:12px; padding:5px 9px; gap:8px;}
     .btn{padding:12px 18px; font-size:15px; min-width:170px;}
-    .statsBox{gap:16px; padding:16px;}
-    .stat .v{font-size:22px;}
+    .goStats{padding:12px 14px; min-width:auto; width:88vw;}
+    .goRow{font-size:13px;}
+    .goRow.big .val{font-size:19px;}
+    .goRow.total .val{font-size:17px;}
   }
 </style>
 </head>
@@ -215,15 +232,22 @@
       <div class="subtitle" style="margin-top:14px;max-width:360px;line-height:1.5;">
         Toca <b>izquierda / derecha</b> para cambiar de carril.<br>
         Toca el <b>centro</b> para dar una <b>tacleada</b> y romper paredes.<br>
-        <span style="color:var(--accent)">⚡ Las paredes eléctricas NO se pueden romper: ¡esquívalas!</span>
+        <span style="color:var(--accent)">⚡ Las paredes eléctricas NO se pueden romper: ¡esquívalas!</span><br>
+        <span style="color:var(--ok)">🪙 Cada 4 metros = 1 moneda extra al terminar.</span>
       </div>
     </div>
 
     <div class="overlay hidden" id="pauseOverlay">
       <div class="title" style="font-size:clamp(30px,8vw,52px)">⏸ PAUSA</div>
-      <div class="statsBox">
-        <div class="stat"><div class="v" id="pauseMeters">0</div><div class="l">Metros</div></div>
-        <div class="stat"><div class="v" id="pauseCoins">0</div><div class="l">Monedas</div></div>
+      <div class="statsBox" style="background:var(--card);border-radius:16px;padding:16px 22px;display:flex;gap:26px;">
+        <div class="stat" style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v" id="pauseMeters" style="font-size:26px;font-weight:900;color:var(--accent);">0</div>
+          <div class="l" style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Metros</div>
+        </div>
+        <div class="stat" style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v" id="pauseCoins" style="font-size:26px;font-weight:900;color:var(--accent);">0</div>
+          <div class="l" style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Monedas</div>
+        </div>
       </div>
       <div class="rowBtns" style="margin-top:8px;">
         <button class="btn" id="resumeBtn">▶ Reanudar</button>
@@ -269,15 +293,36 @@
 
     <div class="overlay hidden" id="gameOverOverlay">
       <div class="title" style="font-size:clamp(30px,8vw,50px)">💥 ¡CHOCASTE!</div>
-      <div class="statsBox">
-        <div class="stat"><div class="v" id="goMeters">0</div><div class="l">Metros</div></div>
-        <div class="stat"><div class="v" id="goCoins">0</div><div class="l">Monedas</div></div>
+
+      <div class="goStats">
+        <div class="goRow big">
+          <span class="label">📏 Distancia</span>
+          <span class="val" id="goMeters">0 m</span>
+        </div>
+        <div class="goRow">
+          <span class="label">🪙 Monedas recogidas</span>
+          <span class="val" id="goCoinsPicked">0</span>
+        </div>
+        <div class="goRow extra">
+          <span class="label">📐 Bono por metros (÷4)</span>
+          <span class="val" id="goCoinsBonus">+0</span>
+        </div>
+        <div class="goRow total">
+          <span class="label">💰 Total ganado</span>
+          <span class="val" id="goCoinsTotal">0</span>
+        </div>
       </div>
+
       <div id="recordSection" class="hidden" style="display:flex;flex-direction:column;gap:10px;align-items:center;">
         <div class="newRecord">🎉 ¡NUEVO RÉCORD! 🎉</div>
         <input type="text" id="playerName" maxlength="12" placeholder="Tu nombre" />
         <button class="btn small" id="saveRecord">💾 Guardar récord</button>
       </div>
+      <div id="noRecordMsg" class="noRecord hidden">
+        No superaste el 3er lugar del historial.<br>
+        ¡Sigue intentando para entrar al ranking! 🏆
+      </div>
+
       <div class="rowBtns" style="margin-top:8px;">
         <button class="btn" id="retryBtn">🔁 Otra partida</button>
         <button class="btn secondary" id="goShopBtn">🛒 Tienda</button>
@@ -299,7 +344,6 @@
     </div>
   </div>
 
-  <!-- Enlace: solo visible cuando tenga la clase .visible -->
   <div id="footer">
     <a href="https://jaid227.github.io/EntropiaDigital/" target="_blank" rel="noopener">
       → © 2026 Mandrágora Entrópica | Desarrollo Web Estratégico ←
@@ -318,6 +362,7 @@ const SAVE_KEY = 'destructor_save_v1';
 const RECORDS_KEY = 'destructor_records_v1';
 const RESIZE_DEBOUNCE_MS = 260;
 const RESIZE_MIN_DELTA = 4;
+const METERS_PER_COIN = 4; // 4 metros = 1 moneda
 
 const ARMORS = [
   { id:'none',   name:'Sin armadura', color:'#9aa3b2', price:0,      emoji:'👕', breaks:[] },
@@ -343,7 +388,7 @@ const COIN_TYPES = {
 
 /* ---------- Persistencia ---------- */
 let save = { coins:0, armors:['none'], currentArmor:'none', medalUnlocked:false, totalRuns:0 };
-let records = [];
+let records = []; // array de { name, meters, coins, date } ordenado desc por meters
 
 function loadSave(){
   try{
@@ -351,6 +396,8 @@ function loadSave(){
     if(s) save = Object.assign(save, JSON.parse(s));
     const r = localStorage.getItem(RECORDS_KEY);
     if(r) records = JSON.parse(r) || [];
+    records.sort((a,b)=> b.meters - a.meters);
+    records = records.slice(0,3);
   }catch(e){ console.warn('load err', e); }
 }
 function persist(){
@@ -411,6 +458,7 @@ const AudioFX = (() => {
     start(){ [440,554,659,880].forEach((f,i)=>setTimeout(()=>tone(f,0.15,'triangle',0.15), i*80)); },
     pause(){ tone(420, 0.1, 'triangle', 0.12, 300); },
     resume(){ tone(300, 0.12, 'triangle', 0.12, 480); },
+    bonus(){ [660,880,1100].forEach((f,i)=>setTimeout(()=>tone(f,0.14,'triangle',0.13), i*90)); },
   };
 })();
 
@@ -842,11 +890,18 @@ function crash(e){
   state.screenShake = 22;
   spawnBreak(laneX[state.lane], playerY, '#ff5d7a', 30);
 
-  save.coins += state.runCoins;
+  // --- Cálculo de recompensas ---
+  const meters = Math.floor(state.distance);
+  const picked = state.runCoins;
+  const bonus = Math.floor(meters / METERS_PER_COIN); // 4 metros = 1 moneda
+  const total = picked + bonus;
+
+  // Sumar al guardado global
+  save.coins += total;
   save.totalRuns++;
   persist();
 
-  const meters = Math.floor(state.distance);
+  // ¿Califica como nuevo récord?
   const qualifies = records.length < 3 || meters > records[records.length-1].meters;
   const isNewRecord = qualifies && meters > 0;
 
@@ -854,9 +909,15 @@ function crash(e){
   if(gameOverTimeout) clearTimeout(gameOverTimeout);
   gameOverTimeout = setTimeout(()=>{
     gameOverTimeout = null;
-    showGameOver(meters, state.runCoins, isNewRecord);
+    showGameOver({ meters, picked, bonus, total }, isNewRecord);
   }, 500);
+
+  // Guardar datos para el saveRecordNow
+  lastRun = { meters, picked, bonus, total };
 }
+
+/* Guarda el último run para usarlo en saveRecordNow */
+let lastRun = null;
 
 /* ---------- Draw ---------- */
 function draw(){
@@ -1256,7 +1317,6 @@ function hideAllOverlays(){
   [startOverlay, shopOverlay, historyOverlay, gameOverOverlay, finalOverlay, pauseOverlay, resizeOverlay].forEach(hide);
 }
 
-/* Muestra el menú de inicio y el footer (único lugar donde aparece) */
 function goToStartScreen(){
   hideAllOverlays();
   show(startOverlay);
@@ -1264,7 +1324,6 @@ function goToStartScreen(){
   updateHud();
   checkMedal();
 }
-/* Oculta el footer cuando salimos del menú */
 function leaveStartScreen(){
   setFooterVisible(false);
 }
@@ -1334,28 +1393,47 @@ function resetGameState(){
   updateHud();
 }
 
-function showGameOver(meters, coins, isRecord){
+/* Muestra Game Over con desglose de recompensas */
+function showGameOver(data, isRecord){
   hideAllOverlays();
-  $('goMeters').textContent = meters + 'm';
-  $('goCoins').textContent = formatNum(coins);
+  const { meters, picked, bonus, total } = data;
+
+  $('goMeters').textContent = meters + ' m';
+  $('goCoinsPicked').textContent = formatNum(picked);
+  $('goCoinsBonus').textContent = '+'+formatNum(bonus);
+  $('goCoinsTotal').textContent = formatNum(total);
+
   const recSec = $('recordSection');
+  const noRec = $('noRecordMsg');
+
   if(isRecord){
     show(recSec);
+    hide(noRec);
     AudioFX.record();
     $('playerName').value = '';
-    $('playerName').focus();
+    setTimeout(()=>{ try{ $('playerName').focus(); }catch(e){} }, 100);
   } else {
     hide(recSec);
+    // Mostrar mensaje si ya hay 3 récords llenos y no superó ninguno
+    if(records.length >= 3){
+      show(noRec);
+    } else {
+      hide(noRec);
+    }
   }
   show(gameOverOverlay);
   pauseBtn.classList.remove('visible');
   updateHud();
 }
 
+/* Guarda el récord. Ahora solo se llama cuando el jugador realmente califica
+   (isRecord fue true al mostrar el overlay). Guarda el total de monedas ganado. */
 function saveRecordNow(){
+  if(!lastRun) return;
   const name = ($('playerName').value || 'Anónimo').trim().slice(0,12) || 'Anónimo';
-  const meters = Math.floor(state.distance);
-  records.push({ name, meters, coins: state.runCoins, date: Date.now() });
+  const { meters, total } = lastRun;
+
+  records.push({ name, meters, coins: total, date: Date.now() });
   records.sort((a,b)=> b.meters - a.meters);
   records = records.slice(0,3);
   persist();
@@ -1579,7 +1657,6 @@ loadSave();
 
 updateHud();
 checkMedal();
-// Al iniciar, como empieza en el menú, mostramos el footer
 setFooterVisible(true);
 requestAnimationFrame(loop);
 
